@@ -147,7 +147,7 @@ class Web3Repository {
     String? tx;
     BigInt tokenId = hexToInt(currentAddress!);
     BigInt _dataEngagement = BigInt.zero;
-    BigInt hash = hexToInt(_hashK_UA);
+    BigInt hash = bytesToInt(keccak256(hexToBytes(_hashK_UA)));
     print("tokenId: $tokenId");
     print("hash: $hash");
 
