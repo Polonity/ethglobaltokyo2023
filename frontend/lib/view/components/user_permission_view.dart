@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/repository/web3_repository.dart';
@@ -13,6 +15,7 @@ class UserPermissionView extends StatefulWidget {
 
 class _UserPermissionViewState extends State<UserPermissionView> {
   String _sharedKey = '';
+  bool _isProgress = false;
   @override
   void initState() {
     // TODO: implement initState
@@ -28,26 +31,51 @@ class _UserPermissionViewState extends State<UserPermissionView> {
     return Column(
       children: [
         ElevatedButton(
-            onPressed: () async {
-              //! TODO: request permission
-              final recept = await Web3Repository().startUserEngagement(_sharedKey);
-              if (recept == null || recept.status == false) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Failed to request permission'),
-                  ),
-                );
-                return;
-              }
-              // if success Transaction
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => RecordingView(
-                            sharedSecret: _sharedKey,
-                          )));
-            },
-            child: Text('Request Permission')),
+            onPressed: _isProgress
+                ? null
+                : () async {
+                    setState(() {
+                      _isProgress = true;
+                    });
+                    final txReceipt = await Web3Repository().startUserEngagement(_sharedKey);
+                    if (txReceipt == null) {
+                      setState(() {
+                        _isProgress = false;
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to request permission'),
+                        ),
+                      );
+                      return;
+                    }
+                    setState(() {
+                      _isProgress = false;
+                    });
+                    if (txReceipt.status == true) {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => RecordingView(
+                                    sharedSecret: _sharedKey,
+                                  )));
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to request permission'),
+                        ),
+                      );
+                    }
+                  },
+            child: _isProgress
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Text('Request Permission')),
       ],
     );
   }

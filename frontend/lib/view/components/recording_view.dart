@@ -26,15 +26,21 @@ class RecordingView extends StatefulWidget {
 
 class _RecordingViewState extends State<RecordingView> {
   bool _isRecording = false;
+  bool _isPlaying = false;
+  bool _isUploading = false;
   html.MediaRecorder? _mediaRecorder;
   List<Uint8List> _audioChunks = [];
   Uint8List? _recordedAudio;
   html.AudioElement? _audioElement;
+  int _currentStep = 0;
 
   void _startRecording() async {
     _audioChunks.clear();
+    const options = {
+      'audioBitsPerSecond': 22050,
+    };
     final html.MediaStream mediaStream = await html.window.navigator.mediaDevices!.getUserMedia({'audio': true});
-    _mediaRecorder = html.MediaRecorder(mediaStream);
+    _mediaRecorder = html.MediaRecorder(mediaStream, options);
 
     _mediaRecorder!.addEventListener('dataavailable', (html.Event e) async {
       print('dataavailable');
@@ -52,9 +58,12 @@ class _RecordingViewState extends State<RecordingView> {
       }
       Future.delayed(Duration(seconds: 1), () {
         _audioElement = html.AudioElement();
-        _audioElement!.src = html.Url.createObjectUrlFromBlob(html.Blob(_audioChunks, 'audio/wav'));
+        _audioElement!.src = html.Url.createObjectUrlFromBlob(html.Blob(_audioChunks, 'audio/webm'));
         html.document.body!.append(_audioElement!);
         print('recorded audio: ${_audioElement!.src.length} bytes');
+        setState(() {
+          _currentStep = 1;
+        });
       });
     });
 
@@ -63,7 +72,7 @@ class _RecordingViewState extends State<RecordingView> {
       _isRecording = true;
     });
 
-    Future.delayed(Duration(seconds: 5), () {
+    Future.delayed(Duration(seconds: 60), () {
       _stopRecording();
     });
   }
@@ -93,8 +102,18 @@ class _RecordingViewState extends State<RecordingView> {
   }
 
   void _playRecording() {
+    setState(() {
+      _isPlaying = true;
+    });
     _audioElement?.load();
     _audioElement?.play();
+    Future.delayed(Duration(seconds: 5), () {
+      _audioElement?.pause();
+      setState(() {
+        _isPlaying = false;
+        _currentStep = 2;
+      });
+    });
   }
 
   Future<Uint8List> _encryptAudioFile() async {
@@ -162,44 +181,83 @@ class _RecordingViewState extends State<RecordingView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Audio Recorder'),
+        title: Text('Recording Studio'),
       ),
       body: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            ElevatedButton(
-              onPressed: _isRecording ? null : _startRecording,
-              child: Text('Start Recording'),
+            FittedBox(
+              child: Text(
+                'Let\'s record your voice!🎙',
+                style: TextStyle(fontSize: 20),
+              ),
             ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _playRecording,
-              child: Text('Play Recording'),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () async {
-                final encryptedAudio = await _encryptAudioFile();
-                // verify the encrypted audio file
-                final decryptedAudio = await _decryptAudioFile(encryptedAudio);
-                for (var i = 0; i < decryptedAudio.length; i++) {
-                  if (decryptedAudio[i] != _recordedAudio![i]) {
-                    throw Exception('Decrypted audio does not match the original audio');
-                  }
-                }
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (0 <= _currentStep)
+                  ElevatedButton(
+                    onPressed: _isRecording ? null : _startRecording,
+                    child: _isRecording
+                        ? SizedBox(
+                            child: LinearProgressIndicator(),
+                            width: 20,
+                            height: 20,
+                          )
+                        : Text('1.Start Recording'),
+                  ),
+                SizedBox(height: 20),
+                if (1 <= _currentStep)
+                  ElevatedButton(
+                    onPressed: _playRecording,
+                    child: _isPlaying
+                        ? SizedBox(
+                            child: LinearProgressIndicator(),
+                            width: 20,
+                            height: 20,
+                          )
+                        : Text('2.Check Recording'),
+                  ),
+                SizedBox(height: 20),
+                if (2 <= _currentStep)
+                  ElevatedButton(
+                    onPressed: () async {
+                      setState(() {
+                        _isUploading = true;
+                      });
+                      final encryptedAudio = await _encryptAudioFile();
+                      // verify the encrypted audio file
+                      final decryptedAudio = await _decryptAudioFile(encryptedAudio);
+                      for (var i = 0; i < decryptedAudio.length; i++) {
+                        if (decryptedAudio[i] != _recordedAudio![i]) {
+                          throw Exception('Decrypted audio does not match the original audio');
+                        }
+                      }
 
-                downloadBlobData(decryptedAudio, 'recorded_audio.wav', 'audio/wav');
-                // You can use the 'encryptedAudio' Uint8List for uploading the file
-                print('Encrypted Audio Length: ${encryptedAudio.length}');
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('encrypt success')));
+                      downloadBlobData(decryptedAudio, 'recorded.webm', 'audio/webm');
+                      // You can use the 'encryptedAudio' Uint8List for uploading the file
+                      print('Encrypted Audio Length: ${encryptedAudio.length}');
 
-                if (await _uploadToServer(Web3Repository().currentAddress!, Web3Repository().publicKey!, encryptedAudio)) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('upload success')));
-                }
-              },
-              child: Text('Encrypt and Upload'),
-            ),
+                      if (await _uploadToServer(Web3Repository().currentAddress!, Web3Repository().publicKey!, encryptedAudio)) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: Colors.green, content: Text('upload success')));
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: Colors.red, content: Text('upload failed')));
+                      }
+                      setState(() {
+                        _isUploading = false;
+                      });
+                    },
+                    child: _isUploading
+                        ? SizedBox(
+                            child: CircularProgressIndicator(),
+                            width: 20,
+                            height: 20,
+                          )
+                        : Text('3.Upload!'),
+                  ),
+              ],
+            )
           ],
         ),
       ),
@@ -232,7 +290,7 @@ class _RecordingViewState extends State<RecordingView> {
 
   void displayDownloadLink(Uint8List audioData, String fileName) {
     // Uint8ListをBlobに変換
-    final blob = html.Blob([audioData], 'audio/wav');
+    final blob = html.Blob([audioData], 'audio/webm');
 
     // Blobから一時的なダウンロードURLを作成
     final url = html.Url.createObjectUrlFromBlob(blob);

@@ -32,8 +32,8 @@ logger.info('PUBLIC_KEY: ' + PUBLIC_KEY)
 logger.info('PRIVATE_KEY: ' + PRIVATE_KEY)
 # logger.info('CONTRACT_ADDRESS: ' + CONTRACT_ADDRESS)
 
-AUDIO_FILE_NAME = './decrypted_audio.wav'
-RADIO_COMMAND = f'sudo /home/gohiki/workspace/radio/pifm {AUDIO_FILE_NAME}'
+AUDIO_FILE_NAME = './decrypted_audio.webm'
+RADIO_COMMAND = f'ffmpeg -i  {AUDIO_FILE_NAME} -acodec pcm_s16le -ar 22050 -f wav - | sudo /home/gohiki/workspace/radio/pifm -'
 
 # set publickey to contract if have not set yet
 

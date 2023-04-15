@@ -30,7 +30,7 @@ class Web3Repository {
 
   Web3EasyCredentials? _credential;
 
-  final _privateKeyAsMapKey = "privateKey";
+  final _privateKeyAsMapKey = "radiostation:::demo:::privateKey";
 
   final _secureStorage = FlutterSecureStorage();
 
@@ -49,7 +49,7 @@ class Web3Repository {
 
   Future<void> init() async {
     print("Web3Repository::init");
-    await _secureStorage.deleteAll();
+    // await _secureStorage.deleteAll();
     await _secureStorage.containsKey(key: _privateKeyAsMapKey);
     await loadCredential();
   }
@@ -142,22 +142,17 @@ class Web3Repository {
     client.printErrors = true;
     RadioPermissionController _contract = RadioPermissionController(address: EthereumAddress.fromHex(Constants.contractAddress), client: client, chainId: Constants.chainId);
 
-    final _transaction = Transaction(
-      from: EthereumAddress.fromHex(currentAddress!),
-      nonce: await client.getTransactionCount(EthereumAddress.fromHex(currentAddress!), atBlock: BlockNum.pending()),
-      maxGas: 5000000,
-
-      gasPrice: EtherAmount.fromUnitAndValue(EtherUnit.gwei, BigInt.from(70)),
-      // EIP-1559
-      maxFeePerGas: EtherAmount.fromUnitAndValue(EtherUnit.gwei, BigInt.from(70)),
-      maxPriorityFeePerGas: EtherAmount.fromUnitAndValue(EtherUnit.gwei, BigInt.from(30)),
-    );
-
     debugPrint("signing...");
 
     String? tx;
+    BigInt tokenId = hexToInt(currentAddress!);
+    BigInt _dataEngagement = BigInt.zero;
+    BigInt hash = hexToInt(_hashK_UA);
+    print("tokenId: $tokenId");
+    print("hash: $hash");
+
     try {
-      tx = await _contract.startUserEngagement(hexToInt(currentAddress!), BigInt.zero, hexToInt(_hashK_UA), credentials: _credential!);
+      tx = await _contract.startUserEngagement(tokenId, _dataEngagement, hash, credentials: _credential!);
       debugPrint("tx: $tx");
     } catch (e) {
       debugPrint(e.toString());
@@ -165,6 +160,10 @@ class Web3Repository {
     }
 
     final receipt = await _waitTransaction(client, tx!);
+    if (null == receipt) {
+      errorMessage = "Failed to start user engagement";
+      return null;
+    }
 
     client.dispose();
 
@@ -194,9 +193,9 @@ class Web3Repository {
   }
 
   // get transaction receipt to be confirmed
-  Future<TransactionReceipt?> getTransactionReceipt(String rpcUrl, String _tx) async {
+  Future<TransactionReceipt?> getTransactionReceipt(String _tx) async {
     TransactionReceipt? _receipt;
-    final Web3Client _client = Web3Client(rpcUrl, Client());
+    final Web3Client _client = Web3Client(Constants.rpcUrl, Client());
 
     try {
       _receipt = await _client.getTransactionReceipt(_tx);

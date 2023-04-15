@@ -8,16 +8,12 @@ import {RadioPermissionController} from "../src/RadioPermissionController.sol";
 contract RadioPermissionControllerTest is Test {
     RadioPermissionController controller;
 
-    uint256 m_physicalAssetPrivateKey = 0xc340a2006b4e66676bab00fd91d083d76f5af46707e2d3b61ead3ef497273636;
     string m_physicalAssetPublicKey = 
             "3b3f9b38988da8941bf98c44791e42d92bfea57a7cc371c6740d5d68d71f2f6b"
             "0c3dab7179a1ba434cab6d52edc227e98aefd90d9a8615a68e92c94ce0025af3";
-    address m_physicalAssetAddress;
+    address m_physicalAssetAddress = address(0x987A29D57679D0B2d98aC53f3d2c2A786716831C);
 
     function setUp() public {
-        // privatekey -> publickey -> address
-        m_physicalAssetAddress = vm.addr(m_physicalAssetPrivateKey);
-        
         controller = new RadioPermissionController(
             m_physicalAssetAddress, 
             m_physicalAssetPublicKey
