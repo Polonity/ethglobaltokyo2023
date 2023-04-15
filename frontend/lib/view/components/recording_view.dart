@@ -72,7 +72,7 @@ class _RecordingViewState extends State<RecordingView> {
       _isRecording = true;
     });
 
-    Future.delayed(Duration(seconds: 60), () {
+    Future.delayed(Duration(seconds: 5), () {
       _stopRecording();
     });
   }
@@ -181,7 +181,7 @@ class _RecordingViewState extends State<RecordingView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Recording Studio'),
+        title: Text('WorldRadio'),
       ),
       body: Center(
         child: Column(

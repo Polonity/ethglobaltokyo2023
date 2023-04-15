@@ -24,7 +24,7 @@ class _LandingViewState extends State<LandingView> {
     onLoaded(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('LandingView'),
+        title: const Text('WorldRadio'),
       ),
       body: Center(
         child: FutureBuilder(
