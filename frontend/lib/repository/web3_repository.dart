@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 // import 'package:frontend/abi/contract.g.dart';
+import 'package:frontend/abi/RadioPermissionController.g.dart';
 import 'package:frontend/config/constants.dart';
 import 'package:frontend/util/web3_credentials.dart';
 import 'package:http/http.dart';
@@ -92,7 +93,7 @@ class Web3Repository {
     try {
       _credential = Web3EasyCredentials.fromHex(_secret);
       currentAddress = (await _credential!.extractAddress()).hexEip55;
-      _publicKey = bytesToHex(_credential!.encodedPublicKey);
+      _publicKey = bytesToHex(_credential!.encodedPublicKey, include0x: true);
 
       debugPrint("currentAddress: $currentAddress");
       debugPrint("publicKey: $_publicKey");
@@ -126,45 +127,49 @@ class Web3Repository {
     return bytesToHex(_credential!.encodedPublicKey);
   }
 
-  // // tx =_contract.verifyAndExecute(signal, root, nullifierHash, proof, credentials: credentials)
-  // Future<String?> requestPermission(String signal, Uint8List root, Uint8List nullifierHash, List<Uint8List> proof) async {
-  //   if (null == _credential) {
-  //     // not connected
-  //     return null;
-  //   }
-  //   debugPrint("addr $currentAddress");
+  String getPhysicalAssetPublicKey() {
+    return '3b3f9b38988da8941bf98c44791e42d92bfea57a7cc371c6740d5d68d71f2f6b0c3dab7179a1ba434cab6d52edc227e98aefd90d9a8615a68e92c94ce0025af3';
+  }
 
-  //   final client = Web3Client(Constants.rpcUrl, Client());
-  //   client.printErrors = true;
-  //   Contract _contract = Contract(address: EthereumAddress.fromHex(Constants.contractAddress), client: client, chainId: Constants.chainId);
+  Future<TransactionReceipt?> startUserEngagement(String _hashK_UA) async {
+    if (null == _credential) {
+      // not connected
+      return null;
+    }
+    debugPrint("addr $currentAddress");
 
-  //   final _transaction = Transaction(
-  //     from: EthereumAddress.fromHex(currentAddress!),
-  //     nonce: await client.getTransactionCount(EthereumAddress.fromHex(currentAddress!), atBlock: BlockNum.pending()),
-  //     maxGas: 5000000,
+    final client = Web3Client(Constants.rpcUrl, Client());
+    client.printErrors = true;
+    RadioPermissionController _contract = RadioPermissionController(address: EthereumAddress.fromHex(Constants.contractAddress), client: client, chainId: Constants.chainId);
 
-  //     gasPrice: EtherAmount.fromUnitAndValue(EtherUnit.gwei, BigInt.from(70)),
-  //     // EIP-1559
-  //     maxFeePerGas: EtherAmount.fromUnitAndValue(EtherUnit.gwei, BigInt.from(70)),
-  //     maxPriorityFeePerGas: EtherAmount.fromUnitAndValue(EtherUnit.gwei, BigInt.from(30)),
-  //   );
+    final _transaction = Transaction(
+      from: EthereumAddress.fromHex(currentAddress!),
+      nonce: await client.getTransactionCount(EthereumAddress.fromHex(currentAddress!), atBlock: BlockNum.pending()),
+      maxGas: 5000000,
 
-  //   debugPrint("signing...");
+      gasPrice: EtherAmount.fromUnitAndValue(EtherUnit.gwei, BigInt.from(70)),
+      // EIP-1559
+      maxFeePerGas: EtherAmount.fromUnitAndValue(EtherUnit.gwei, BigInt.from(70)),
+      maxPriorityFeePerGas: EtherAmount.fromUnitAndValue(EtherUnit.gwei, BigInt.from(30)),
+    );
 
-  //   String? tx;
-  //   try {
-  //     tx = await _contract.verifyAndExecute(EthereumAddress.fromHex(signal), bytesToInt(root.toList()), bytesToInt(nullifierHash.toList()), proof.map((e) => bytesToInt(e.toList())).toList(),
-  //         credentials: _credential!);
-  //     debugPrint("tx: $tx");
-  //   } catch (e) {
-  //     debugPrint(e.toString());
-  //     errorMessage = e.toString();
-  //   }
+    debugPrint("signing...");
 
-  //   client.dispose();
+    String? tx;
+    try {
+      tx = await _contract.startUserEngagement(hexToInt(currentAddress!), BigInt.zero, hexToInt(_hashK_UA), credentials: _credential!);
+      debugPrint("tx: $tx");
+    } catch (e) {
+      debugPrint(e.toString());
+      errorMessage = e.toString();
+    }
 
-  //   return tx;
-  // }
+    final receipt = await _waitTransaction(client, tx!);
+
+    client.dispose();
+
+    return receipt;
+  }
 
   // wait transaction to be confirmed
   Future<TransactionReceipt?> _waitTransaction(Web3Client _client, String _tx) async {

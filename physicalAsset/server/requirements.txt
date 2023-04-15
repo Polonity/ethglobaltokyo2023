@@ -1,0 +1,4 @@
+-e git+https://github.com/alexmgr/tinyec.git#egg=tinyec
+web3
+flask
+flask-cors

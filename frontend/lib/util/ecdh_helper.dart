@@ -7,7 +7,31 @@ class ECDHHelper {
   static ECDomainParameters _domainParams = ECCurve_secp256k1();
   ECDomainParameters get domainParams => _domainParams;
 
-  BigInt generateECDHSharedSecret(String userPrivateKeyHex, String otherUserPublicKeyHex) {
+  String generateECDHSharedSecret(String userPrivateKeyHex, String otherUserPublicKeyHex) {
+    // Curve used for ECDH
+
+    // Get private key from hex
+    BigInt privateKey = BigInt.parse(userPrivateKeyHex, radix: 16);
+
+    // Get public key x and y coordinates from hex
+    BigInt publicKeyX = BigInt.parse(otherUserPublicKeyHex.substring(0, 64), radix: 16);
+    BigInt publicKeyY = BigInt.parse(otherUserPublicKeyHex.substring(64, 128), radix: 16);
+
+    // Create public key point
+    ECPoint publicKeyPoint = _domainParams.curve.createPoint(publicKeyX, publicKeyY);
+
+    // Generate shared key
+    ECPoint? sharedKeyPoint = publicKeyPoint * privateKey;
+
+    // Convert to hex
+    BigInt sharedKey = (sharedKeyPoint!.x!.toBigInteger()! | sharedKeyPoint.y!.toBigInteger()!);
+    String sharedKeyHex = '0x' + sharedKey.toRadixString(16).padLeft(64, '0');
+
+    print('SHARED KEY: $sharedKeyHex');
+    return sharedKeyHex;
+  }
+
+  BigInt generateECDHSharedSecretAsBigInt(String userPrivateKeyHex, String otherUserPublicKeyHex) {
     final privateKeyBigInt = BigInt.parse(userPrivateKeyHex, radix: 16);
     final privateKey = ECPrivateKey(privateKeyBigInt, _domainParams);
 

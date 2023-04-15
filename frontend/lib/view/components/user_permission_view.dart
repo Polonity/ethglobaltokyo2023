@@ -12,14 +12,14 @@ class UserPermissionView extends StatefulWidget {
 }
 
 class _UserPermissionViewState extends State<UserPermissionView> {
-  BigInt _sharedKey = BigInt.zero;
+  String _sharedKey = '';
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
 
     setState(() {
-      _sharedKey = _calcSharedKey() ?? BigInt.zero;
+      _sharedKey = _calcSharedKey() ?? '';
     });
   }
 
@@ -28,10 +28,17 @@ class _UserPermissionViewState extends State<UserPermissionView> {
     return Column(
       children: [
         ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               //! TODO: request permission
-              // Web3Repository().requestPermission();
-
+              final recept = await Web3Repository().startUserEngagement(_sharedKey);
+              if (recept == null || recept.status == false) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to request permission'),
+                  ),
+                );
+                return;
+              }
               // if success Transaction
               Navigator.push(
                   context,
@@ -45,18 +52,20 @@ class _UserPermissionViewState extends State<UserPermissionView> {
     );
   }
 
-  BigInt? _calcSharedKey() {
+  String? _calcSharedKey() {
     final pri = Web3Repository().getPrivateKey();
-    final pub = Web3Repository().publicKey;
+    final pub = Web3Repository().getPhysicalAssetPublicKey();
+
+    debugPrint("_calcSharedKey publicKey: $pub");
+    debugPrint("_calcSharedKey privateKey: $pri");
     if (null == pri || null == pub) {
-      debugPrint("_calcSharedKey publicKey: $pub");
-      debugPrint("_calcSharedKey privateKey: $pri");
       return null;
     }
-    final _sharedKey = ECDHHelper().generateECDHSharedSecret(pri, pub);
-    final _sharedKeyHex = _sharedKey.toRadixString(16);
+    final _sharedKeyHex = ECDHHelper().generateECDHSharedSecret(pri, pub);
+    // final _sharedKey = ECDHHelper().generateECDHSharedSecretAsBigInt(pri, pub);
+    // final _sharedKeyHex = _sharedKey.toRadixString(16);
     print('shared key: $_sharedKeyHex');
 
-    return _sharedKey;
+    return _sharedKeyHex;
   }
 }
